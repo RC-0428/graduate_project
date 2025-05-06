@@ -54,13 +54,19 @@ def ask_lmstudio(context: str, question: str) -> str:
 # 整合搜尋與回答 
 searcher = QdrantSearcher()
 
+### 提高效率1：段落摘要壓縮
+def summarize_context(context: str) -> str:
+    summary_prompt = "請將以下多段資料摘要為要點，以便用於問題回答：\n" + context
+    return ask_lmstudio(summary_prompt, "請摘要上述內容")
+
 # 定義主要的對話函式 chat，輸入問題 query，回傳模型的回答
 def chat(query):
     results = searcher.search(query) # 先用 Qdrant 向量資料庫搜尋相關段落
     if not results:
         return "❌ 找不到相關內容。請換個說法。" # 如果沒找到內容就回傳提示
     context = "\n\n".join(results)  # 將多個段落用換行分隔組成上下文
-    answer = ask_lmstudio(context, query)  # 把上下文與問題一起送去給 LM Studio 生成回答
+    summarized_context = summarize_context(context) ###摘要答案
+    answer = ask_lmstudio(summarized_context, query)  # 把上下文與問題一起送去給 LM Studio 生成回答
     return answer
 
 # 建立 Gradio UI 
