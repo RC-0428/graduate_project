@@ -6,8 +6,8 @@ from sentence_transformers import SentenceTransformer, util
 # csv_folder：CSV檔案置放資料夾路徑
 # output_csv：去重病整合後的新CSV檔名
 # model：使用的模型種類
-csv_folder = r"C:\Users\Ching\Downloads\CSV"
-output_csv = "merged_deduped_output2-7.csv"
+csv_folder = r"C:\Users\Ching\Downloads\CSV_v2"
+output_csv = "merged_deduped_output2-7_demo.csv"
 model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
 # 記錄所有段落
@@ -24,7 +24,7 @@ for file in os.listdir(csv_folder):
             if text:
                 paragraphs.append(text)
 
-print(f"總段落數：{len(paragraphs)}")
+#print(f"總段落數：{len(paragraphs)}")
 
 # 對所有段落做語意向量嵌入
 embeddings = model.encode(paragraphs, convert_to_tensor=True)
