@@ -9,7 +9,7 @@ class QdrantSearcher:
     # collection_name：欲使用的向量資料庫名稱
     # self.client：qdrant連接的位址以及port
     # self.model：使用的模型種類
-    def __init__(self, collection_name="my_documents2-7v2"):
+    def __init__(self, collection_name="QAdic_v1"):
         self.client = QdrantClient("localhost", port=32768)
         self.collection_name = collection_name
         self.model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
@@ -23,8 +23,11 @@ class QdrantSearcher:
             query_vector=vector,  # 使用轉換後的向量作為搜尋關鍵
             limit=limit # 最多回傳幾筆結果（預設是 3 筆）
         )
+        if results and results[0].score > 0.85:
+            return results[0].payload["answer"]
+        return None
         # 從搜尋結果中取出 payload（原始段落文字），組成清單回傳
-        return [r.payload.get("chunk_text", "") for r in results]
+        ##return [r.payload.get("chunk_text", "") for r in results]
 
 # 呼叫 LM Studio 模型並取得模型回答
 def ask_lmstudio(context: str, question: str) -> str:
@@ -35,8 +38,10 @@ def ask_lmstudio(context: str, question: str) -> str:
         "model": "yi-1.5-6b-chat", # 使用的模型種類
         # 模仿 OpenAI 的 Chat API 格式
         "messages": [
-            {"role": "system", "content": "你是繁體中文知識助手，請根據提供的內容回答問題。"},# 系統提示：設定 AI 的角色與語言
-            {"role": "user", "content": f"以下是參考內容：\n{context}\n\n問題：{question}"} # 使用者輸入的上下文與問題
+            ##{"role": "system", "content": "你是繁體中文知識助手，請根據提供的內容回答問題。"},# 系統提示：設定 AI 的角色與語言
+            ##{"role": "user", "content": f"以下是參考內容：\n{context}\n\n問題：{question}"} # 使用者輸入的上下文與問題
+            {"role": "system", "content": "你是繁體中文知識助手，請根據參考內容並自行補充合理內容來回答使用者問題"},
+            {"role": "user", "content": f"以下是根據資料庫查詢到的參考答案：\n{context}\n\n請根據此參考內容與你的理解來回答使用者的問題：{question}"}
         ],
         "temperature": 0.7,# 控制回答的創造力（0 越穩定，1 越有創意）
         "stream": False  # 是否開啟串流回答（這裡關閉，直接回傳整段）
