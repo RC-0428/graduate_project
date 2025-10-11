@@ -1,8 +1,43 @@
-﻿
+﻿from flask import Flask, request, abort
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import MessageEvent, TextMessage, TextSendMessage
 import gradio as gr
 import requests
+import os
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
+import threading
+
+# 讀取環境變數（或直接貼上你的 Token 與 Secret）
+LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "fMbCvIudIk+Qzafcx2N8QvOkb/2rmSdw+wWTwdX7zhzz7dndEuGooi4YljZOi304Bek7QghN0qp6hMZy5Zuhqjzhc4+OUSdydqevK/YO7G8OIwLZ1Ya+eWAbg1sdhNNtykvKokCdYLcSPmHx3rt2ewdB04t89/1O/w1cDnyilFU=")
+LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "113f99564b7941732e96c4fd1debf395")
+
+app = Flask(__name__)
+
+line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
+handler = WebhookHandler(LINE_CHANNEL_SECRET)
+
+# Webhook 路徑，LINE 會把使用者訊息 POST 到這裡
+@app.route("/callback", methods=["POST"])
+def callback():
+    signature = request.headers["X-Line-Signature"]
+    body = request.get_data(as_text=True)
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        abort(400)
+    return "OK"
+
+# 接收文字訊息
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    user_text = event.message.text
+    answer = chat(user_text)  # 呼叫你的 LLM 問答系統
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=answer)
+    )
 
 # 向量搜尋器，設定相關參數
 class QdrantSearcher:
@@ -45,10 +80,10 @@ def ask_lmstudio(context: str, question: str) -> str:
     url = "http://127.0.0.1:1234/v1/chat/completions"
     # 設定要送給模型的資料（payload）
     payload = {
-        "model": "yi-1.5-6b-chat", # 使用的模型種類
+        "model": "breeze-7b-instruct-v1_0", # 使用的模型種類
         # 模仿 OpenAI 的 Chat API 格式
         "messages": [
-            ##{"role": "system", "content": "你是繁體中文知識助手，請根據提供的內容回答問題。"},# 系統提示：設定 AI 的角色與語言
+            ##{"role": "system", "content": "你是繁體中文知識助手，請根據提供的內容以大約50~80字內簡短回答問題。"},# 系統提示：設定 AI 的角色與語言
             ##{"role": "user", "content": f"以下是參考內容：\n{context}\n\n問題：{question}"} # 使用者輸入的上下文與問題
             {"role": "system", "content": "你是繁體中文知識助手，請根據參考內容並自行補充合理內容來回答使用者問題"},
             {"role": "user", "content": f"以下是根據資料庫查詢到的參考答案：\n{context}\n\n請根據此參考內容與你的理解來回答使用者的問題：{question}"}
@@ -97,5 +132,15 @@ iface = gr.Interface(
     description="輸入問題，系統會先從 Qdrant 向量資料庫中搜尋相關段落，再請本地模型回答。" # 介面的簡短說明
 )
 
-# 啟動 Gradio 介面，開啟本地瀏覽器讓使用者互動
-iface.launch()
+## 啟動 Gradio 介面，開啟本地瀏覽器讓使用者互動
+##iface.launch()
+
+# ============= 同時啟動 Flask + Gradio =============
+if __name__ == "__main__":
+    def run_gradio():
+        iface.launch(server_port=7860, share=True)  # Gradio 在 7860 port
+
+    t = threading.Thread(target=run_gradio)
+    t.start()
+
+    app.run(host="0.0.0.0", port=5000)  # Flask 在 5000 port
