@@ -9,7 +9,7 @@ from sentence_transformers import SentenceTransformer
 # COLLECTION_NAME：向量資料庫名稱
 # DIMENSION：使用的模型向量維度
 CSV_FOLDER = r"C:\Users\Ching\OneDrive\桌面\阿邱\暨大\必修\專題\graduate_project_git\CSV_QAHv1"
-COLLECTION_NAME = "QAdic_HV1"
+COLLECTION_NAME = "QAdic_HV3"
 DIMENSION = 384 
 
 # 初始化模型與 Qdrant 客戶端 
@@ -48,7 +48,7 @@ for filename in os.listdir(CSV_FOLDER):
                 )
                 # 將這筆資料加入 Qdrant 的向量資料庫中
                 qdrant.upsert(collection_name=COLLECTION_NAME, points=[point])
-                print(f"✅ 已加入 Point ID {point_id}：{question[:20]}...")  # 顯示部分問題作為確認
+                print(f"✅ 已加入 Point ID {point_id}：{question[:20]}...{answer[:20]}")  # 顯示部分問題作為確認
                 # ID 加 1，準備處理下一筆
                 point_id += 1
 
