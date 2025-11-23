@@ -8,8 +8,8 @@ from sentence_transformers import SentenceTransformer
 # CSV_FOLDER：CSV檔案置放資料夾路徑
 # COLLECTION_NAME：向量資料庫名稱
 # DIMENSION：使用的模型向量維度
-CSV_FOLDER = r"C:\Users\Ching\OneDrive\桌面\阿邱\暨大\必修\專題\graduate_project_git\CSV_QAv1"
-COLLECTION_NAME = "QAdic_v1"
+CSV_FOLDER = r"C:\Users\Ching\OneDrive\桌面\阿邱\暨大\必修\專題\graduate_project_git\CSV_QAHv1"
+COLLECTION_NAME = "QAdic_HV1"
 DIMENSION = 384 
 
 # 初始化模型與 Qdrant 客戶端 

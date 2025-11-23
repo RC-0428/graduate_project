@@ -53,7 +53,7 @@ class QdrantSearcher:
     def search_faq(self, user_question: str, limit: int = 1):
         vector = self.model.encode(user_question).tolist()
         results = self.client.search(
-            collection_name="QAdic_v1", 
+            collection_name="QAdic_HV1", 
             query_vector=vector, 
             limit=limit)
         if results and results[0].score > 0.85:
@@ -83,9 +83,9 @@ def ask_lmstudio(context: str, question: str) -> str:
         "model": "breeze-7b-instruct-v1_0", # 使用的模型種類
         # 模仿 OpenAI 的 Chat API 格式
         "messages": [
-            ##{"role": "system", "content": "你是繁體中文知識助手，請根據提供的內容以大約50~80字內簡短回答問題。"},# 系統提示：設定 AI 的角色與語言
+            ##{"role": "system", "content": "你是繁體中文知識助手，請根據參考內容並自行補充合理內容來回答使用者問題。"},# 系統提示：設定 AI 的角色與語言
             ##{"role": "user", "content": f"以下是參考內容：\n{context}\n\n問題：{question}"} # 使用者輸入的上下文與問題
-            {"role": "system", "content": "你是繁體中文知識助手，請根據參考內容並自行補充合理內容來回答使用者問題"},
+            {"role": "system", "content": "你是繁體中文知識助手，請根據提供的內容以大約50~80字內簡短回答問題"},
             {"role": "user", "content": f"以下是根據資料庫查詢到的參考答案：\n{context}\n\n請根據此參考內容與你的理解來回答使用者的問題：{question}"}
         ],
         "temperature": 0.7,# 控制回答的創造力（0 越穩定，1 越有創意）
