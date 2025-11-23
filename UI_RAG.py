@@ -54,9 +54,7 @@ class QdrantSearcher:
         self.collection_name = collection_name
         self.model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
-    # 先查詢典型字典
-
-    
+    # 先查詢典型字典    
     def search_faq(self, user_question: str, limit: int = 1):
         vector = self.model.encode(user_question).tolist()
 
@@ -77,6 +75,30 @@ class QdrantSearcher:
             return None
         answer = best.payload.get("answer")
         print("⚡ FAQ answer 欄位:", answer)
+
+        return answer
+    
+    # 再查詢chat_log   
+    def search_chatlog(self, user_question: str, limit: int = 1):
+        vector = self.model.encode(user_question).tolist()
+
+        results = self.client.search(
+            collection_name="chat_history_v2",
+            query_vector=vector,
+            limit=limit
+        )
+        print("✒️ ChatLog 搜尋結果（raw）:", results)
+        if not results:
+            print("❗ ChatLog 沒有任何結果，可能 collection 為空")
+            return None
+        best = results[0]
+        print("✒️ ChatLog payload:", best.payload)
+        print("✒️ ChatLog score:", best.score)
+        if best.score < 0.60:
+            print("❗ score 太低 → 視為不相關")
+            return None
+        answer = best.payload.get("ai_answer")
+        print("✒️ ChatLog answer 欄位:", answer)
 
         return answer
 
@@ -183,11 +205,13 @@ def insert_chat_to_qdrant(user_question, ai_answer, timestamp):
 def chat(query):
     faq_answer = searcher.search_faq(query)  # 查詢典型問答字典
     related_paragraphs = searcher.search(query)  # 查詢原始段落
+    chatlog_answer = searcher.search_chatlog(query) #查chatlog
     print("📌 搜尋到的 FAQ：", faq_answer) 
     print("📌 搜尋到的原始段落：", related_paragraphs)
+    print("📌 搜尋到的 ChatLog：", chatlog_answer)
     ##results = searcher.search(query) # 先用 Qdrant 向量資料庫搜尋相關段落
     ##if not results:
-    if not faq_answer and not related_paragraphs:
+    if not faq_answer and not related_paragraphs and not chatlog_answer:
         return "❌ 找不到相關內容。請換個說法。" # 如果沒找到內容就回傳提示
     # 組合參考內容
     combined_context = ""
@@ -195,6 +219,8 @@ def chat(query):
         combined_context += f"【典型問答】\n{faq_answer}\n\n"
     if related_paragraphs:
         combined_context += "【相關段落】\n" + "\n---\n".join(related_paragraphs)
+    if chatlog_answer:
+        combined_context += f"【典型問答】\n{chatlog_answer}\n\n"
     ##context = "\n\n".join(results)  # 將多個段落用換行分隔組成上下文
     answer = ask_lmstudio(combined_context, query)  # 把上下文與問題一起送去給 LM Studio 生成回答
 
